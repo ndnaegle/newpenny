@@ -24,12 +24,12 @@ void loop() {
 //  delay(100);
 //  digitalWrite(ledPin, LOW);
 //  delay(100);
-//  Serial.print("Finished a loop #");
-//  Serial.println(++loopCount, DEC);
-   blinkNtimes(5);
-   delay(1000);
-   blinkNtimes(3);
-   delay(2000);
+  blinkNtimes(5);
+  delay(1000);
+  blinkNtimes(3);
+  Serial.print("Finished a loop #");
+  Serial.println(++loopCount, DEC);
+  delay(2000);
 }
 
 void blinkNtimes(int n) {
