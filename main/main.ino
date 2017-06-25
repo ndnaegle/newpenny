@@ -21,33 +21,40 @@
 // 19 OUT1 - Pin 9
 // 20 Vcc
 
-// Not found: Coin Accept, Go/No-Go
-
 // Arduino Inputs
-// Pin 0 - Not connected
-// Pin 1 - Not connected
-// Pin 2 - 6818.8 - NC
-// Pin 3 - 6818.7 - DB25.13 - 
+// Pin 0 - NC
+// Pin 1 - NC
+// Pin 2 - 6818.9 - IN8 - NC
+// Pin 3 - 6818.8 - IN7 - DB25.13 - Purple wire - Home sensor?
+int homeSensorPin = 3
+// Pin 4 - 6818.7 - IN6 - DB25.12 - Brown/White wire - 90 degree sensor? (these two could be swapped)
+int degree90SensorPin = 4
+// Pin 5 - 6818.6 - IN5 - DB25.11 - Black/Red/White wire - Magnetic Alarm Contact (Coin accept?)
+int coinAcceptPin = 5
+// Pin 6 - 6818.5 - IN4 - DB25.10 - Brown wire - Button 1
+int button1Pin = 6
+// Pin 7 - 6818.4 - IN3 - DB25.09 - Orange wire - Button 2
+int button2Pin = 7
+// Pin 8 - 6818.3 - IN2 - DB25.08 - Blue wire - Button 3
+int button3Pin = 8
+// Pin 9 - 6818.2 - IN1 - DB25.07 - Red wire - Button 4
+int button4Pin = 9
 
+// Arduino Outputs (going to have to use trial and error to figure this out)
+// Pin 10 - 62783.I1 - ? Counter?
+int outputCounterPin = 10
+// Pin 11 - 62783.I2 - DB25.5 - Black wire - Middle Relay - Lower Solenoid
+int outputSolenoidPin = 11
+// Pin 12 - 62783.I3 - DB25.4 - Green wire - Left Relay - Motor Run
+int outputMotorRunPin = 12
+// Pin 13 - 62783.I4 - DB25.2 - Yellow wire - Right Relay - Upper Solenoid - Cycle Start?
+int outputCycleStart = 13
 
-// P0.0    GO/NO-GO    GO=0, HALT=1
-// P0.1    COIN ACCEPT
-// P0.2    DIE # 4
-// P0.3    DIE # 3
-// P0.4    DIE # 2
-// P0.5    DIE # 1
-// P0.6    90 DEGREE
-// PO.7    HOME
-
-// Outputs
+// Outputs from old system...these probably map into the Arduino outputs above
 // P1.0    CYCLE START
 // P1.1    SOLENOID
 // P1.2    MOTOR RUN
 // P1.3    COUNTER
-// P1.4    "A"     UNUSED
-// P1.5    "B"     UNUSED
-// P1.6    "C"     UNUSED
-// P1.7    "D"     UNUSED
 
 
 void setup() {
@@ -63,7 +70,7 @@ void reset() {
 }
 
 void wait_for_coin() {
-  // this routine waits for a coin. While it's waiting, it flashes the LEDs in sequence A, B, C, D
+  // this routine waits for the correct coins to be inserted
 }
 
 
