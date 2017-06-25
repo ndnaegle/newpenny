@@ -1,13 +1,5 @@
-/*
- * Blink
- *
- * The basic Arduino example.  Turns on an LED on for one second,
- * then off for one second, and so on...  We use pin 13 because,
- * depending on your Arduino board, it has either a built-in LED
- * or a built-in resistor so that you need only an LED.
- *
- * http://www.arduino.cc/en/Tutorial/Blink
- */
+// Blink
+//  Blinks the LED (on pin 13) in various patterns
 
 int ledPin = 13;                // LED connected to digital pin 13
 int loopCount = 0;
@@ -20,10 +12,6 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-//  digitalWrite(ledPin, HIGH);
-//  delay(100);
-//  digitalWrite(ledPin, LOW);
-//  delay(100);
   blinkNtimes(5);
   delay(1000);
   blinkNtimes(3);
