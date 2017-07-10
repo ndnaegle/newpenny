@@ -1,77 +1,287 @@
+// Main.ino
+//  Main source file for newpenny project
+//  June 2017
 
-// 6818 pinout
-// 1 /EN Tri-state enable - NC
-// 2 IN1 - DB25.7 - Red wire - Button 4
-// 3 IN2 - DB25.8 - Blue wire - Button 3
-// 4 IN3 - DB25.9 - Orange wire - Button 2
-// 5 IN4 - DB25.10 - Brown wire - Button 1
-// 6 IN5 - DB25.11 - Black/Red/White wire - Magnetic Alarm Contact
-// 7 IN6 - DB25.12 - Brown/White wire - Home sensor or 90 degree
-// 8 IN7 - DB25.13 - Purple wire - Home sensor or 90 degree
-// 9 IN8 - NC
-// 10 Ground
-// 11 /CH - NC
-// 12 OUT8 - Pin 2
-// 13 OUT7 - Pin 3
-// 14 OUT6 - Pin 4
-// 15 OUT5 - Pin 5
-// 16 OUT4 - Pin 6
-// 17 OUT3 - Pin 7
-// 18 OUT2 - Pin 8
-// 19 OUT1 - Pin 9
-// 20 Vcc
+#include <avr/wdt.h>
 
-// Arduino Inputs
-// Pin 0 - NC
-// Pin 1 - NC
-// Pin 2 - 6818.9 - IN8 - NC
-// Pin 3 - 6818.8 - IN7 - DB25.13 - Purple wire - Home sensor?
-int homeSensorPin = 3
-// Pin 4 - 6818.7 - IN6 - DB25.12 - Brown/White wire - 90 degree sensor? (these two could be swapped)
-int degree90SensorPin = 4
-// Pin 5 - 6818.6 - IN5 - DB25.11 - Black/Red/White wire - Magnetic Alarm Contact (Coin accept?)
-int coinAcceptPin = 5
-// Pin 6 - 6818.5 - IN4 - DB25.10 - Brown wire - Button 1
-int button1Pin = 6
-// Pin 7 - 6818.4 - IN3 - DB25.09 - Orange wire - Button 2
-int button2Pin = 7
-// Pin 8 - 6818.3 - IN2 - DB25.08 - Blue wire - Button 3
-int button3Pin = 8
-// Pin 9 - 6818.2 - IN1 - DB25.07 - Red wire - Button 4
-int button4Pin = 9
+#include "main.h"
+#include "log.h"
+#include "input.h"
+#include "console.h"
+#include "display.h"
+#include "output.h"
+#include "pinouts.h"
 
-// Arduino Outputs (going to have to use trial and error to figure this out)
-// Pin 10 - 62783.I1 - ? Counter?
-int outputCounterPin = 10
-// Pin 11 - 62783.I2 - DB25.5 - Black wire - Middle Relay - Lower Solenoid
-int outputSolenoidPin = 11
-// Pin 12 - 62783.I3 - DB25.4 - Green wire - Left Relay - Motor Run
-int outputMotorRunPin = 12
-// Pin 13 - 62783.I4 - DB25.2 - Yellow wire - Right Relay - Upper Solenoid - Cycle Start?
-int outputCycleStart = 13
+// Globals
+int theState = INVALID_STATE;
 
-// Outputs from old system...these probably map into the Arduino outputs above
-// P1.0    CYCLE START
-// P1.1    SOLENOID
-// P1.2    MOTOR RUN
-// P1.3    COUNTER
-
+const char* dumpState(int state) {
+    const char* pTag = NULL;
+    switch (state) {
+      case INVALID_STATE: pTag = "Invalid"; break;
+      case START_STATE: pTag = "Start"; break;
+      case WAIT_FOR_HOME_STATE: pTag = "Wait for Home"; break;
+      case WAIT_FOR_COIN_STATE: pTag = "Wait for Coin"; break;
+      case WAIT_FOR_BUTTON_STATE: pTag = "Wait for Button"; break;
+      case STAMP_SELECTOR_STATE: pTag = "Position Stamp"; break;
+      case COIN_DROP_STATE: pTag = "Coin Drop"; break;
+      case WAIT_FOR_STAMP_FINISH_STATE: pTag = "Wait for Finish"; break;
+      case SHUTDOWN_STATE: pTag = "Shutdown"; break;
+      case RESET_STATE: pTag = "Reset"; break;
+      case FOREVER_STATE: pTag = "Wait Forever"; break;
+      default: pTag = "Unknown!"; break;
+    }
+    return pTag;
+}
 
 void setup() {
-  
+    // initialize our screen
+    initDisplay(VERSION);
+    
+    // Modes for pins assumed to be INPUT so we don't set modes for inputs
+
+    // Initialize pin input emulation via serial (input.cpp)
+    initSerialKeys();
+
+    // Set the mode for the output pins
+    pinMode(outputCounterPin, OUTPUT);
+    pinMode(outputCoinDropPin, OUTPUT);
+    pinMode(outputMotorRunPin, OUTPUT);
+    pinMode(outputRedLeverLiftPin, OUTPUT);
+
+    // Setup serial port and wait until it's ready
+    Serial.begin(9600);
+    while (!Serial)
+        ;
+
+    // Give the user a chance to start the debug console
+    debugConsole();
+
+    // make sure hardware is in a sane state
+    outputRedLeverLift.write(LOW);
+    outputMotorRun.write(LOW);
+    outputCoinDrop.write(LOW);
+    outputCounter.write(LOW);
+
+    // Start at reset state
+    Serial.println("Starting state machine...");
+    gotoState(START_STATE);
 }
+
+int stamp = 0;
+boolean edgeDetect = false; 
 
 void loop() {
+    static unsigned long int countdown = 0;
+    
+    switch (theState) {
+    case START_STATE:
+        outputRedLeverLift.write(LOW);
+        outputMotorRun.write(HIGH);
+        inputHome.start();
+        gotoState(WAIT_FOR_HOME_STATE);
+        break;
 
+    case WAIT_FOR_HOME_STATE:
+        if (inputHome.read() == LOW) {
+            Serial.println("Motor reached home position");
+            outputMotorRun.write(LOW);
+            outputRedLeverLift.write(HIGH);             
+            gotoState(WAIT_FOR_COIN_STATE);
+        }
+        break;
+    case WAIT_FOR_COIN_STATE:
+        if (inputCoinAccept.read() == LOW) {
+            Serial.println("Coin has been accepted");
+            outputRedLeverLift.write(LOW);
+            inputButton1.start();
+            inputButton2.start();
+            inputButton3.start();
+            inputButton4.start();
+            gotoState(WAIT_FOR_BUTTON_STATE);            
+        }
+        break;
+        
+    case WAIT_FOR_BUTTON_STATE:
+        if (inputButton1.read() == LOW) {
+            Serial.println("Button 1 has been pressed");
+            stamp = 1;
+            outputMotorRun.write(HIGH);
+            gotoState(STAMP_SELECTOR_STATE);
+        }
+        else if (inputButton2.read() == LOW) {
+            Serial.println("Button 2 has been pressed");
+            stamp = 2;
+            outputMotorRun.write(HIGH);
+            gotoState(STAMP_SELECTOR_STATE);
+        }
+        else if (inputButton3.read() == LOW) {
+            Serial.println("Button 3 has been pressed");
+            stamp = 3;
+            outputMotorRun.write(HIGH);
+            gotoState(STAMP_SELECTOR_STATE);
+        }
+        else if (inputButton4.read() == LOW) {
+            Serial.println("Button 4 has been pressed");
+            stamp = 4;
+            outputMotorRun.write(HIGH);
+            input90Degree.start();
+            gotoState(STAMP_SELECTOR_STATE);
+        }
+        break;
+    case STAMP_SELECTOR_STATE:
+        if (input90Degree.read() == LOW) {
+            edgeDetect = true;  // We need to make sure we don't count down until the 90 degree sensor has risen *and* fallen
+        } else if (input90Degree.read() == HIGH && edgeDetect) {
+            edgeDetect = false;                    
+            if (--stamp == 0) { // countdown the number of 90 degree sensor hits we've had
+                outputCoinDrop.write(HIGH);
+                Serial.println("The coin has been dropped");
+                outputCounter.write(HIGH);
+                countdown = millis();
+                gotoState(COIN_DROP_STATE);
+            }
+        }
+        break;
+    case COIN_DROP_STATE:
+        if (millis() > countdown + 1000) {
+            outputCoinDrop.write(LOW);
+            outputCounter.write(LOW);
+            gotoState(WAIT_FOR_STAMP_FINISH_STATE);
+            countdown = millis();
+        }
+        break;
+    case WAIT_FOR_STAMP_FINISH_STATE:
+        if (millis() > countdown + 5 * 1000) {
+            gotoState(START_STATE);
+        }
+        break;                                                          
+
+    case SHUTDOWN_STATE:
+        outputRedLeverLift.write(LOW);
+        outputMotorRun.write(LOW);
+        outputCoinDrop.write(LOW);
+        outputCounter.write(LOW);        
+        gotoState(FOREVER_STATE);
+        break;
+
+    case RESET_STATE:
+        Serial.println("Resetting board using watchdog...\n\n");
+        Serial.flush();
+        
+        display.clearDisplay();
+        display.setTextSize(2);
+        display.setTextColor(WHITE);
+        display.setCursor(0,0);
+        display.println("Reset!");
+        display.display();
+
+        // enable watchdog timer (which will reboot the board) and wait until it fires
+        wdt_enable(WDTO_15MS);
+        while (true)
+            ;
+        break;
+
+    case FOREVER_STATE:
+        break;
+    }
+    updateSerialKeys();
+    displayStatus();
 }
 
-void reset() {
-  // put the code here to reset the device back to the starting state
+
+// displayStatus
+//  Shows the status of the system on the OLED screen
+void displayStatus(void) {
+    static unsigned long timeLastStateChange = 0;
+    static int lastState = INVALID_STATE;
+    
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0,0);
+
+    // state
+    display.println(dumpState(theState));
+
+    // Outputs
+    display.setTextSize(2);
+    outputRedLeverLift.displayLevel();
+    outputMotorRun.displayLevel();
+    outputCoinDrop.displayLevel();
+
+    // Inputs
+    inputHome.displayLevel();
+    input90Degree.displayLevel();
+    inputCoinAccept.displayLevel();
+    inputButton1.displayLevel();
+    inputButton2.displayLevel();
+    inputButton3.displayLevel();
+    inputButton4.displayLevel();    
+    display.println();
+
+    // time since last state change (TODO: use for screen saver)
+    unsigned long timeNow = millis();
+    if (theState != lastState) {
+        lastState = theState;
+        timeLastStateChange = timeNow;
+    }
+    unsigned long timeSinceLastStateChange = timeNow - timeLastStateChange;
+    display.setTextSize(1);
+    display.print("LS: ");
+    displayElapsedTime(timeSinceLastStateChange / 1000);
+    display.display();
 }
 
-void wait_for_coin() {
-  // this routine waits for the correct coins to be inserted
+// gotoState
+//  Transitions to the specified state
+//  (and gives us a chance to log the state change)
+void gotoState(int newState) {
+    // Display on serial
+    Serial.print("Transitioning state: ");
+    Serial.print(dumpState(theState));
+    Serial.print("-->");
+    Serial.print(dumpState(newState));
+    Serial.println();
+
+    // Also store it in the EEPROM log
+    theLog.output(theState, newState);
+
+    // Finally set the global state for the next loop
+    theState = newState;
 }
 
+// macros from DateTime.h 
+#define SECS_PER_MIN  (60UL)
+#define SECS_PER_HOUR (3600UL)
+#define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
 
+// prepare to compute elapsed time
+#define numberOfSeconds(_time_) (_time_ % SECS_PER_MIN)  
+#define numberOfMinutes(_time_) ((_time_ / SECS_PER_MIN) % SECS_PER_MIN) 
+#define numberOfHours(_time_) (( _time_% SECS_PER_DAY) / SECS_PER_HOUR)
+#define elapsedDays(_time_) ( _time_ / SECS_PER_DAY)  
+
+// displayElapsedTime
+//  displays elapsed time from number of input seconds
+void displayElapsedTime(unsigned long elapsed) {
+    int days = elapsedDays(elapsed);
+    int hours = numberOfHours(elapsed);
+    int minutes = numberOfMinutes(elapsed);
+    int seconds = numberOfSeconds(elapsed);
+
+    display.print(days,DEC);  
+    printDigits(hours);  
+    printDigits(minutes);
+    printDigits(seconds);
+}
+
+// printDigits
+//  Prints decimal digits for elapsed time
+void printDigits(byte digits){
+    display.print(":");
+    if (digits < 10)
+        display.print('0');
+    display.print(digits, DEC);  
+}
 
