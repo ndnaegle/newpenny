@@ -27,7 +27,7 @@ void Output::write(int value) {
     Serial.print("Writing value to ");
     Serial.print(m_name);
     Serial.print("-->");
-    Serial.println(value, DEC);    
+    Serial.println(value, DEC);
 }
 
 int Output::readback(void) {

@@ -2,6 +2,10 @@
 //  Main source file for newpenny project
 //  June 2017
 
+// Libraries used:
+//  AdaFruit GFX
+//  AdaFruit SSD1306
+
 #include <avr/wdt.h>
 
 #include "main.h"
@@ -50,7 +54,7 @@ void setup() {
     pinMode(outputRedLeverLiftPin, OUTPUT);
 
     // Setup serial port and wait until it's ready
-    Serial.begin(9600);
+    Serial.begin(115200);
     while (!Serial)
         ;
 
