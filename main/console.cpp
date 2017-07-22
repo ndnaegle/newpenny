@@ -10,10 +10,9 @@
 // startConsole
 //  Decide whether to start the console based on user input
 boolean startConsole(void) {
-    Serial.print("Hit 'd' to start debug mode, otherwise will start in ");
+    Serial.print(F("Hit 'd' to start debug mode: "));
     Serial.flush();
     display.setCursor(0, 24);
-    display.print("Console? ");
     display.display();
     unsigned long timeStart = millis();
     int countdown = 5;
@@ -62,8 +61,8 @@ void debugConsole(void) {
     boolean finished = false;
     int command;
     while (!finished) {
-        Serial.println("Debug commands: 'd' --> dump log, 'c' --> clear log, 'x' --> exit and boot");
-        Serial.print("Enter command:");
+        Serial.println(F("'d' dump log, 'c' clear log, 'x' exit and boot"));
+        Serial.print(F("> "));
         do {
           command = Serial.read() | 32;
         } while (command == -1);

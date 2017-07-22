@@ -29,6 +29,7 @@ void initSerialKeys(void) {
     serialkeys[button2Pin].key = '2';
     serialkeys[button3Pin].key = '3';
     serialkeys[button4Pin].key = '4';
+    serialkeys[buttonReset].key = 'r';
 }
 
 // updateSerialKeys
@@ -39,10 +40,6 @@ void updateSerialKeys(void) {
 
     while (Serial.available() > 0) {
         int incoming = Serial.read() | 32; // or with 32 forces value to lowercase
-        if (incoming == 'r') {
-            gotoState(RESET_STATE);
-            return;
-        }
         for (int i = 0 ; i < MAX_PINS ; ++i) {
             if (serialkeys[i].key == incoming) {
                 serialkeys[i].pin = LOW;
@@ -66,20 +63,25 @@ void updateSerialKeys(void) {
     lastTime = millis();
 }
 
-Input inputHome(homeSensorPin, 50, 'H');
-Input input90Degree(degree90SensorPin, 50, '9');
-Input inputCoinAccept(coinAcceptPin, 50, 'A');
-Input inputButton1(button1Pin, 50, '1');
-Input inputButton2(button2Pin, 50, '2');
-Input inputButton3(button3Pin, 50, '3');
-Input inputButton4(button4Pin, 50, '4');
+// with hardware debounce, we don't need much here. Zero might be OK.
+// with no hardware debounce, increase this to 40-50 ms
+#define DEBOUNCE_TIME 5 
 
-// delay is typically 40-50ms
-Input::Input(int pin, int delay, char displaySymbol):
+Input inputHome(homeSensorPin, DEBOUNCE_TIME, LOW, 'H');
+Input input90Degree(degree90SensorPin, DEBOUNCE_TIME, LOW, '9');
+Input inputCoinAccept(coinAcceptPin, DEBOUNCE_TIME, LOW, 'A');
+Input inputButton1(button1Pin, DEBOUNCE_TIME, LOW, '1');
+Input inputButton2(button2Pin, DEBOUNCE_TIME, LOW, '2');
+Input inputButton3(button3Pin, DEBOUNCE_TIME, LOW, '3');
+Input inputButton4(button4Pin, DEBOUNCE_TIME, LOW, '4');
+Input inputReset(buttonReset, DEBOUNCE_TIME, LOW, 'R');
+
+Input::Input(int pin, int delay, int activeOn, char displaySymbol):
     m_lastDebounceTime(0),
     m_lastButtonState(HIGH),
     m_pin(pin),
     m_debounceDelay(delay),
+    m_activeOn(activeOn),
     m_displaySymbol(displaySymbol)
 {
 }
@@ -92,7 +94,7 @@ void Input::start(void) {
 }
 
 // read
-//  debounces the input. Returns either the value or -1 if we haven't waited long enough yet.
+//  debounces the input. Returns whether the pin is active (1 or 0) or -1 if we haven't waited long enough yet.
 int Input::read(void) {
     int reading = this->readBouncy();
     if (reading != m_lastButtonState) {
@@ -100,7 +102,7 @@ int Input::read(void) {
         m_lastButtonState = reading;
     }
     if (millis() > m_lastDebounceTime + m_debounceDelay) {
-        return m_lastButtonState;
+        return m_lastButtonState == m_activeOn;
     } else {
         return -1;
     }

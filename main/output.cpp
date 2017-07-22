@@ -24,9 +24,9 @@ Output::Output(int pin, const char* name, char displaySymbol):
 void Output::write(int value) {
     m_value = value;
     digitalWrite(m_pin, value);
-    Serial.print("Writing value to ");
+    Serial.print(F("Writing value to "));
     Serial.print(m_name);
-    Serial.print("-->");
+    Serial.print(F("-->"));
     Serial.println(value, DEC);
 }
 

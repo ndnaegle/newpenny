@@ -8,11 +8,53 @@
 
 #include "main.h"
 #include "log.h"
+#include <Wire.h>
+#include "Adafruit_FRAM_I2C.h"
 
 Log theLog; // use as a singleton
+Adafruit_FRAM_I2C fram = Adafruit_FRAM_I2C();
+
+void fram_setup(void) {
+    Serial.begin(115200);
+    while (!Serial)
+        ; //wait until Serial ready
+
+    Serial.println(F("About to init FRAM..."));
+    Serial.flush();
+
+    if (fram.begin()) {  // you can stick the new i2c addr in here, e.g. begin(0x51);
+        Serial.println("Found I2C FRAM");
+        Serial.flush();
+    } else {
+        Serial.println("I2C FRAM not identified ... check your connections?\r\n");
+        Serial.println("Will continue in case this processor doesn't support repeated start\r\n");
+        Serial.flush();
+    }
+    
+    // Read the first byte
+    uint8_t test = fram.read8(0x0);
+    Serial.print("Restarted "); Serial.print(test); Serial.println(" times");
+    // Test write ++
+    fram.write8(0x0, test+1);
+    
+    // dump the entire 32K of memory!
+    uint8_t value;
+    for (uint16_t a = 0; a < 32768; a++) {
+    value = fram.read8(a);
+    if ((a % 32) == 0) {
+        Serial.print("\n 0x"); Serial.print(a, HEX); Serial.print(": ");
+    }
+    Serial.print("0x"); 
+    if (value < 0x1) 
+        Serial.print('0');
+        Serial.print(value, HEX); Serial.print(" ");
+    }
+}
+
 
 Log::Log() {
     // we don't clear the log at startup in case we want to read it
+//    fram_setup();
 }
     
 void Log::clear() {
@@ -50,13 +92,13 @@ void Log::dump() {
         if (start == 0) {
             start = bufferEnd;
         }
-        Serial.print("Recorded state #");
+        Serial.print(F("Recorded state #"));
         Serial.print(length - i, DEC);
         Serial.print(": ");
         int toState = EEPROM.read(--start);
         int fromState = EEPROM.read(--start);
         dumpState(fromState);
-        Serial.print("-->");
+        Serial.print(F("-->"));
         dumpState(toState);
         Serial.println();
     }

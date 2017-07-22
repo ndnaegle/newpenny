@@ -39,6 +39,10 @@ const char* dumpState(int state) {
 }
 
 void setup() {
+    Serial.begin(115200);
+    while (!Serial)
+        ;
+        
     // initialize our screen
     initDisplay(VERSION);
     
@@ -53,11 +57,6 @@ void setup() {
     pinMode(outputMotorRunPin, OUTPUT);
     pinMode(outputRedLeverLiftPin, OUTPUT);
 
-    // Setup serial port and wait until it's ready
-    Serial.begin(115200);
-    while (!Serial)
-        ;
-
     // Give the user a chance to start the debug console
     debugConsole();
 
@@ -68,7 +67,7 @@ void setup() {
     outputCounter.write(LOW);
 
     // Start at reset state
-    Serial.println("Starting state machine...");
+    Serial.println(F("Starting state machine..."));
     gotoState(START_STATE);
 }
 
@@ -79,24 +78,26 @@ void loop() {
     static unsigned long int countdown = 0;
     
     switch (theState) {
+        
     case START_STATE:
         outputRedLeverLift.write(LOW);
         outputMotorRun.write(HIGH);
         inputHome.start();
+        inputReset.start();
         gotoState(WAIT_FOR_HOME_STATE);
         break;
 
     case WAIT_FOR_HOME_STATE:
-        if (inputHome.read() == LOW) {
-            Serial.println("Motor reached home position");
+        if (inputHome.read() == ACTIVE) {
+            Serial.println(F("Motor reached home position"));
             outputMotorRun.write(LOW);
             outputRedLeverLift.write(HIGH);             
             gotoState(WAIT_FOR_COIN_STATE);
         }
         break;
     case WAIT_FOR_COIN_STATE:
-        if (inputCoinAccept.read() == LOW) {
-            Serial.println("Coin has been accepted");
+        if (inputCoinAccept.read() == ACTIVE) {
+            Serial.println(F("Coin has been accepted"));
             outputRedLeverLift.write(LOW);
             inputButton1.start();
             inputButton2.start();
@@ -107,26 +108,26 @@ void loop() {
         break;
         
     case WAIT_FOR_BUTTON_STATE:
-        if (inputButton1.read() == LOW) {
-            Serial.println("Button 1 has been pressed");
+        if (inputButton1.read() == ACTIVE) {
+            Serial.println(F("Button 1 has been pressed"));
             stamp = 1;
             outputMotorRun.write(HIGH);
             gotoState(STAMP_SELECTOR_STATE);
         }
-        else if (inputButton2.read() == LOW) {
-            Serial.println("Button 2 has been pressed");
+        else if (inputButton2.read() == ACTIVE) {
+            Serial.println(F("Button 2 has been pressed"));
             stamp = 2;
             outputMotorRun.write(HIGH);
             gotoState(STAMP_SELECTOR_STATE);
         }
-        else if (inputButton3.read() == LOW) {
-            Serial.println("Button 3 has been pressed");
+        else if (inputButton3.read() == ACTIVE) {
+            Serial.println(F("Button 3 has been pressed"));
             stamp = 3;
             outputMotorRun.write(HIGH);
             gotoState(STAMP_SELECTOR_STATE);
         }
-        else if (inputButton4.read() == LOW) {
-            Serial.println("Button 4 has been pressed");
+        else if (inputButton4.read() == ACTIVE) {
+            Serial.println(F("Button 4 has been pressed"));
             stamp = 4;
             outputMotorRun.write(HIGH);
             input90Degree.start();
@@ -134,13 +135,13 @@ void loop() {
         }
         break;
     case STAMP_SELECTOR_STATE:
-        if (input90Degree.read() == LOW) {
+        if (input90Degree.read() == ACTIVE) {
             edgeDetect = true;  // We need to make sure we don't count down until the 90 degree sensor has risen *and* fallen
-        } else if (input90Degree.read() == HIGH && edgeDetect) {
+        } else if (input90Degree.read() == NOT_ACTIVE && edgeDetect) {
             edgeDetect = false;                    
             if (--stamp == 0) { // countdown the number of 90 degree sensor hits we've had
                 outputCoinDrop.write(HIGH);
-                Serial.println("The coin has been dropped");
+                Serial.println(F("The coin has been dropped"));
                 outputCounter.write(HIGH);
                 countdown = millis();
                 gotoState(COIN_DROP_STATE);
@@ -148,20 +149,20 @@ void loop() {
         }
         break;
     case COIN_DROP_STATE:
-        if (millis() > countdown + 1000) {
+        if (millis() > countdown + 1000) { // wait one second after the coin drops to reset the coin drop solenoid
             outputCoinDrop.write(LOW);
             outputCounter.write(LOW);
             gotoState(WAIT_FOR_STAMP_FINISH_STATE);
             countdown = millis();
         }
         break;
-    case WAIT_FOR_STAMP_FINISH_STATE:
+    case WAIT_FOR_STAMP_FINISH_STATE: // wait five seconds which is enough for the coin to make it through
         if (millis() > countdown + 5 * 1000) {
-            gotoState(START_STATE);
+            gotoState(START_STATE); // Going back to start will wait for the motor to hit Home
         }
         break;                                                          
 
-    case SHUTDOWN_STATE:
+    case SHUTDOWN_STATE: // not currently used
         outputRedLeverLift.write(LOW);
         outputMotorRun.write(LOW);
         outputCoinDrop.write(LOW);
@@ -170,14 +171,14 @@ void loop() {
         break;
 
     case RESET_STATE:
-        Serial.println("Resetting board using watchdog...\n\n");
+        Serial.println(F("Resetting board using watchdog...\n\n"));
         Serial.flush();
         
         display.clearDisplay();
         display.setTextSize(2);
         display.setTextColor(WHITE);
         display.setCursor(0,0);
-        display.println("Reset!");
+        display.println(F("Reset!"));
         display.display();
 
         // enable watchdog timer (which will reboot the board) and wait until it fires
@@ -189,8 +190,15 @@ void loop() {
     case FOREVER_STATE:
         break;
     }
+
+    // housekeeping for each loop
     updateSerialKeys();
     displayStatus();
+
+    // see if we're supposed to reset
+    if (inputReset.read() == ACTIVE) {
+        gotoState(RESET_STATE);
+    }
 }
 
 
@@ -242,9 +250,9 @@ void displayStatus(void) {
 //  (and gives us a chance to log the state change)
 void gotoState(int newState) {
     // Display on serial
-    Serial.print("Transitioning state: ");
+    Serial.print(F("Transitioning state: "));
     Serial.print(dumpState(theState));
-    Serial.print("-->");
+    Serial.print(F("-->"));
     Serial.print(dumpState(newState));
     Serial.println();
 
@@ -283,7 +291,7 @@ void displayElapsedTime(unsigned long elapsed) {
 // printDigits
 //  Prints decimal digits for elapsed time
 void printDigits(byte digits){
-    display.print(":");
+    display.print(F(":"));
     if (digits < 10)
         display.print('0');
     display.print(digits, DEC);  
