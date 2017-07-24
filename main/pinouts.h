@@ -15,7 +15,8 @@ const int button1Pin = 5;
 const int button2Pin = 6;
 const int button3Pin = 7;
 const int button4Pin = 8;
-const int buttonReset = 9;
+//const int buttonResetPin = 9; // not working, so "disconnect"
+const int buttonResetPin = 0;
 
 // Arduino Outputs
 const int outputCounterPin = 10;

@@ -11,7 +11,7 @@
 Output outputCounter(outputCounterPin, "Counter", 'X');
 Output outputCoinDrop(outputCoinDropPin, "Coin Drop", 'D');
 Output outputMotorRun(outputMotorRunPin, "Motor Run", 'M');
-Output outputRedLeverLift(outputRedLeverLiftPin, "Lift Red Lever", 'L');
+Output outputRedLeverLift(outputRedLeverLiftPin, "Red Lever (Coin Protect)", 'L');
 
 Output::Output(int pin, const char* name, char displaySymbol):
     m_pin(pin),
@@ -24,10 +24,7 @@ Output::Output(int pin, const char* name, char displaySymbol):
 void Output::write(int value) {
     m_value = value;
     digitalWrite(m_pin, value);
-    Serial.print(F("Writing value to "));
-    Serial.print(m_name);
-    Serial.print(F("-->"));
-    Serial.println(value, DEC);
+    fdump("%s set to %s\n", m_name, value == HIGH ? "HIGH" : "LOW");
 }
 
 int Output::readback(void) {

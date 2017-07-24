@@ -8,8 +8,10 @@
 
 #define VERSION "0.5.0"
 
+#define SCREENSAVER_INTERVAL_MS ((uint32_t)1000 * (uint32_t)60 * (uint32_t)60) // 1 hour
+
 // State indices. Must be less than 256 (8 bits)
-// Make sure to add new states to the dumpState() function below for debugging
+// Make sure to add new states to the dumpState() function for debugging
 #define INVALID_STATE 0
 #define START_STATE 5
 #define WAIT_FOR_HOME_STATE 10
@@ -26,7 +28,12 @@
 extern int theState;
 extern unsigned long int theTime;
 
+// fdump
+//  This tricky macro forces all format strings used with the macro into code (flash) storage rather than SRAM
+#define fdump(fmt, ...) (dump(F(fmt), ##__VA_ARGS__))
+
 // Extern functions
+void dump(const __FlashStringHelper *fmt, ...);
 const char* dumpState(int state);
 void pinWrite(int pin, int value);
 void gotoState(int newState);

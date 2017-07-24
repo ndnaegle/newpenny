@@ -52,11 +52,16 @@ boolean startConsole(void) {
 }
 
 // debugConsole
-//  If requested, starts a debug console to read the EEPROM log or clear it
+//  If requested, starts a debug console to read the log or clear it
 void debugConsole(void) {
     if (!startConsole()) {
         return;
     }
+
+    // indicate on the display that we're in the console
+    display.clearDisplay();
+    display.print("Debug console running");
+    display.display();
 
     boolean finished = false;
     int command;
@@ -73,8 +78,9 @@ void debugConsole(void) {
             theLog.dump();
             break;
         case 'c':
-            Serial.println();
+            Serial.println(F("Clearing log. Please wait up to a minute..."));
             theLog.clear();
+            Serial.println(F("Log cleared."));
             break;
         case 'x':
             finished = true;

@@ -42,6 +42,9 @@ void setup() {
     Serial.begin(115200);
     while (!Serial)
         ;
+
+    // Initialize FRAM logging
+    theLog.init();
         
     // initialize our screen
     initDisplay(VERSION);
@@ -67,7 +70,7 @@ void setup() {
     outputCounter.write(LOW);
 
     // Start at reset state
-    Serial.println(F("Starting state machine..."));
+    fdump("Starting state machine at %lu ticks\n", millis());
     gotoState(START_STATE);
 }
 
@@ -89,15 +92,16 @@ void loop() {
 
     case WAIT_FOR_HOME_STATE:
         if (inputHome.read() == ACTIVE) {
-            Serial.println(F("Motor reached home position"));
+            fdump("Motor reached home position\n");
             outputMotorRun.write(LOW);
-            outputRedLeverLift.write(HIGH);             
+            outputRedLeverLift.write(HIGH);
             gotoState(WAIT_FOR_COIN_STATE);
         }
         break;
+        
     case WAIT_FOR_COIN_STATE:
         if (inputCoinAccept.read() == ACTIVE) {
-            Serial.println(F("Coin has been accepted"));
+            fdump("Coin has been accepted\n");
             outputRedLeverLift.write(LOW);
             inputButton1.start();
             inputButton2.start();
@@ -109,31 +113,35 @@ void loop() {
         
     case WAIT_FOR_BUTTON_STATE:
         if (inputButton1.read() == ACTIVE) {
-            Serial.println(F("Button 1 has been pressed"));
+            fdump("Button 1 has been pressed\n");
             stamp = 1;
             outputMotorRun.write(HIGH);
+            input90Degree.start();
             gotoState(STAMP_SELECTOR_STATE);
         }
         else if (inputButton2.read() == ACTIVE) {
-            Serial.println(F("Button 2 has been pressed"));
+            fdump("Button 2 has been pressed\n");
             stamp = 2;
             outputMotorRun.write(HIGH);
+            input90Degree.start();
             gotoState(STAMP_SELECTOR_STATE);
         }
         else if (inputButton3.read() == ACTIVE) {
-            Serial.println(F("Button 3 has been pressed"));
+            fdump("Button 3 has been pressed\n");
             stamp = 3;
             outputMotorRun.write(HIGH);
+            input90Degree.start();
             gotoState(STAMP_SELECTOR_STATE);
         }
         else if (inputButton4.read() == ACTIVE) {
-            Serial.println(F("Button 4 has been pressed"));
+            fdump("Button 4 has been pressed\n");
             stamp = 4;
             outputMotorRun.write(HIGH);
             input90Degree.start();
             gotoState(STAMP_SELECTOR_STATE);
         }
         break;
+        
     case STAMP_SELECTOR_STATE:
         if (input90Degree.read() == ACTIVE) {
             edgeDetect = true;  // We need to make sure we don't count down until the 90 degree sensor has risen *and* fallen
@@ -141,13 +149,14 @@ void loop() {
             edgeDetect = false;                    
             if (--stamp == 0) { // countdown the number of 90 degree sensor hits we've had
                 outputCoinDrop.write(HIGH);
-                Serial.println(F("The coin has been dropped"));
+                fdump("The coin has been dropped\n");
                 outputCounter.write(HIGH);
                 countdown = millis();
                 gotoState(COIN_DROP_STATE);
             }
         }
         break;
+        
     case COIN_DROP_STATE:
         if (millis() > countdown + 1000) { // wait one second after the coin drops to reset the coin drop solenoid
             outputCoinDrop.write(LOW);
@@ -156,6 +165,7 @@ void loop() {
             countdown = millis();
         }
         break;
+        
     case WAIT_FOR_STAMP_FINISH_STATE: // wait five seconds which is enough for the coin to make it through
         if (millis() > countdown + 5 * 1000) {
             gotoState(START_STATE); // Going back to start will wait for the motor to hit Home
@@ -171,9 +181,6 @@ void loop() {
         break;
 
     case RESET_STATE:
-        Serial.println(F("Resetting board using watchdog...\n\n"));
-        Serial.flush();
-        
         display.clearDisplay();
         display.setTextSize(2);
         display.setTextColor(WHITE);
@@ -181,6 +188,9 @@ void loop() {
         display.println(F("Reset!"));
         display.display();
 
+        fdump("Resetting board using watchdog...\n");
+        Serial.flush();
+        
         // enable watchdog timer (which will reboot the board) and wait until it fires
         wdt_enable(WDTO_15MS);
         while (true)
@@ -197,7 +207,8 @@ void loop() {
 
     // see if we're supposed to reset
     if (inputReset.read() == ACTIVE) {
-        gotoState(RESET_STATE);
+//        fdump("---Reset initiated---\n");
+//        gotoState(RESET_STATE);
     }
 }
 
@@ -207,6 +218,21 @@ void loop() {
 void displayStatus(void) {
     static unsigned long timeLastStateChange = 0;
     static int lastState = INVALID_STATE;
+    
+    // time since last state change
+    unsigned long timeNow = millis();
+    if (theState != lastState) {
+        lastState = theState;
+        timeLastStateChange = timeNow;
+    }
+    unsigned long timeSinceLastStateChange = timeNow - timeLastStateChange;
+
+    // after some period, clear the display to save the poor OLED
+    if (timeSinceLastStateChange > SCREENSAVER_INTERVAL_MS) {
+        display.clearDisplay();
+        display.display();
+        return;        
+    }
     
     display.clearDisplay();
     display.setTextSize(1);
@@ -223,22 +249,16 @@ void displayStatus(void) {
     outputCoinDrop.displayLevel();
 
     // Inputs
-    inputHome.displayLevel();
+//    inputHome.displayLevel();
     input90Degree.displayLevel();
     inputCoinAccept.displayLevel();
     inputButton1.displayLevel();
     inputButton2.displayLevel();
     inputButton3.displayLevel();
-    inputButton4.displayLevel();    
+    inputButton4.displayLevel();
+    inputReset.displayLevel();
     display.println();
 
-    // time since last state change (TODO: use for screen saver)
-    unsigned long timeNow = millis();
-    if (theState != lastState) {
-        lastState = theState;
-        timeLastStateChange = timeNow;
-    }
-    unsigned long timeSinceLastStateChange = timeNow - timeLastStateChange;
     display.setTextSize(1);
     display.print("LS: ");
     displayElapsedTime(timeSinceLastStateChange / 1000);
@@ -249,18 +269,24 @@ void displayStatus(void) {
 //  Transitions to the specified state
 //  (and gives us a chance to log the state change)
 void gotoState(int newState) {
-    // Display on serial
-    Serial.print(F("Transitioning state: "));
-    Serial.print(dumpState(theState));
-    Serial.print(F("-->"));
-    Serial.print(dumpState(newState));
-    Serial.println();
-
-    // Also store it in the EEPROM log
-    theLog.output(theState, newState);
-
-    // Finally set the global state for the next loop
+    fdump("State %s -> %s\n", dumpState(theState), dumpState(newState));
     theState = newState;
+}
+
+// dump
+//  !!Always use fdump macro (main.h)!!
+//  This function is called by the fdump macro and logs a string to both log and to Serial
+//  Truncated to 128 characters
+
+void dump(const __FlashStringHelper *fmt, ... ) {
+    char buf[128]; // resulting string limited to 128 chars
+    va_list args;
+    va_start (args, fmt);
+    vsnprintf_P(buf, sizeof (buf), (const char *)fmt, args); // progmem for AVR
+    va_end(args);
+    
+    Serial.print(buf);
+//    theLog.output(buf);
 }
 
 // macros from DateTime.h 

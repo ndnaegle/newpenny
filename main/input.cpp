@@ -29,7 +29,7 @@ void initSerialKeys(void) {
     serialkeys[button2Pin].key = '2';
     serialkeys[button3Pin].key = '3';
     serialkeys[button4Pin].key = '4';
-    serialkeys[buttonReset].key = 'r';
+    serialkeys[buttonResetPin].key = 'r';
 }
 
 // updateSerialKeys
@@ -67,14 +67,14 @@ void updateSerialKeys(void) {
 // with no hardware debounce, increase this to 40-50 ms
 #define DEBOUNCE_TIME 5 
 
-Input inputHome(homeSensorPin, DEBOUNCE_TIME, LOW, 'H');
-Input input90Degree(degree90SensorPin, DEBOUNCE_TIME, LOW, '9');
-Input inputCoinAccept(coinAcceptPin, DEBOUNCE_TIME, LOW, 'A');
-Input inputButton1(button1Pin, DEBOUNCE_TIME, LOW, '1');
-Input inputButton2(button2Pin, DEBOUNCE_TIME, LOW, '2');
-Input inputButton3(button3Pin, DEBOUNCE_TIME, LOW, '3');
-Input inputButton4(button4Pin, DEBOUNCE_TIME, LOW, '4');
-Input inputReset(buttonReset, DEBOUNCE_TIME, LOW, 'R');
+Input inputHome = Input(homeSensorPin, DEBOUNCE_TIME, LOW, 'H');
+Input input90Degree = Input(degree90SensorPin, DEBOUNCE_TIME, LOW, '9');
+Input inputCoinAccept = Input(coinAcceptPin, DEBOUNCE_TIME, LOW, 'C');
+Input inputButton1 = Input(button1Pin, DEBOUNCE_TIME, LOW, '1');
+Input inputButton2 = Input(button2Pin, DEBOUNCE_TIME, LOW, '2');
+Input inputButton3 = Input(button3Pin, DEBOUNCE_TIME, LOW, '3');
+Input inputButton4 = Input(button4Pin, DEBOUNCE_TIME, LOW, '4');
+Input inputReset = Input(buttonResetPin, DEBOUNCE_TIME, LOW, 'R');
 
 Input::Input(int pin, int delay, int activeOn, char displaySymbol):
     m_lastDebounceTime(0),
@@ -90,7 +90,8 @@ Input::Input(int pin, int delay, int activeOn, char displaySymbol):
 //  starts the counter for debounced input
 void Input::start(void) {
     m_lastDebounceTime = millis();
-    m_lastButtonState = digitalRead(m_pin) & serialkeys[m_pin].pin;
+//    m_lastButtonState = digitalRead(m_pin) & serialkeys[m_pin].pin;
+    m_lastButtonState = !m_activeOn;
 }
 
 // read
