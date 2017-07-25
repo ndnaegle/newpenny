@@ -60,7 +60,8 @@ void debugConsole(void) {
 
     // indicate on the display that we're in the console
     display.clearDisplay();
-    display.print("Debug console running");
+    display.setCursor(0, 24);
+    display.print(F("Debug console running..."));
     display.display();
 
     boolean finished = false;
@@ -78,9 +79,16 @@ void debugConsole(void) {
             theLog.dump();
             break;
         case 'c':
-            Serial.println(F("Clearing log. Please wait up to a minute..."));
+            Serial.println(F("\nClearing log. Please wait up to a minute..."));
             theLog.clear();
-            Serial.println(F("Log cleared."));
+            Serial.println(F("Log cleared.\n"));
+            break;
+        case 'f': // undocumented command to fill the log
+            fdump("Let's fill the log\n");
+            for (int i = 0 ; i < 2000 ; ++i) {
+                fdump("Test log output line #%d\n", i);
+            }
+            fdump("Log should be full\n");
             break;
         case 'x':
             finished = true;

@@ -64,13 +64,15 @@ void setup() {
     debugConsole();
 
     // make sure hardware is in a sane state
+    fdump("\n\nStarting up at %lu ticks\n", millis());
+    fdump("Setting pins to a sane state\n");
     outputRedLeverLift.write(LOW);
     outputMotorRun.write(LOW);
     outputCoinDrop.write(LOW);
     outputCounter.write(LOW);
 
     // Start at reset state
-    fdump("Starting state machine at %lu ticks\n", millis());
+    fdump("Starting state machine\n");
     gotoState(START_STATE);
 }
 
@@ -207,8 +209,8 @@ void loop() {
 
     // see if we're supposed to reset
     if (inputReset.read() == ACTIVE) {
-//        fdump("---Reset initiated---\n");
-//        gotoState(RESET_STATE);
+        fdump("---Reset initiated---\n");
+        gotoState(RESET_STATE);
     }
 }
 
@@ -286,7 +288,7 @@ void dump(const __FlashStringHelper *fmt, ... ) {
     va_end(args);
     
     Serial.print(buf);
-//    theLog.output(buf);
+    theLog.output(buf);
 }
 
 // macros from DateTime.h 
@@ -316,7 +318,7 @@ void displayElapsedTime(unsigned long elapsed) {
 
 // printDigits
 //  Prints decimal digits for elapsed time
-void printDigits(byte digits){
+void printDigits(byte digits) {
     display.print(F(":"));
     if (digits < 10)
         display.print('0');

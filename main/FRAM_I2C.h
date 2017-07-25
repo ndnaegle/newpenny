@@ -15,8 +15,10 @@ class FRAM_I2C {
 public:
     FRAM_I2C(void);
     boolean begin(uint8_t addr = MB85RC_DEFAULT_ADDRESS);
-    void write8 (uint16_t framAddr, uint8_t value);
-    uint8_t read8  (uint16_t framAddr);
+    void write8(uint16_t framAddr, uint8_t value);
+    uint8_t read8(uint16_t framAddr);
+    void write16(uint16_t addr, uint16_t value);
+    uint16_t read16(uint16_t addr);
     void erase(void);
     uint16_t offset(uint16_t addr, uint8_t offset);
     uint16_t m_density;

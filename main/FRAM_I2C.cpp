@@ -90,7 +90,7 @@ boolean FRAM_I2C::begin(uint8_t addr)
     return true;
 }
 
-void FRAM_I2C::write8 (uint16_t framAddr, uint8_t value)
+void FRAM_I2C::write8(uint16_t framAddr, uint8_t value)
 {
     Wire.beginTransmission(m_i2c_addr);
     Wire.write(framAddr >> 8);
@@ -99,7 +99,7 @@ void FRAM_I2C::write8 (uint16_t framAddr, uint8_t value)
     Wire.endTransmission();
 }
 
-uint8_t FRAM_I2C::read8 (uint16_t framAddr)
+uint8_t FRAM_I2C::read8(uint16_t framAddr)
 {
     Wire.beginTransmission(m_i2c_addr);
     Wire.write(framAddr >> 8);
@@ -110,6 +110,20 @@ uint8_t FRAM_I2C::read8 (uint16_t framAddr)
     
     return Wire.read();
 }
+
+void FRAM_I2C::write16(uint16_t addr, uint16_t value) {
+    uint8_t b2 = (uint8_t)(value >> 8);
+    uint8_t b1 = (uint8_t)(value & 0xff);
+    write8(addr, b1);
+    write8(addr + 1, b2);
+}
+
+uint16_t FRAM_I2C::read16(uint16_t addr) {
+    uint8_t b1 = read8(addr);
+    uint8_t b2 = read8(addr + 1);
+    return ((uint16_t)b2 << 8) + (uint16_t)b1;
+}
+
 
 uint16_t FRAM_I2C::offset(uint16_t addr, uint8_t offset) {
     uint32_t bigaddr = (uint32_t)addr + offset;

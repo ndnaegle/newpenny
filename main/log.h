@@ -9,6 +9,9 @@ public:
     void clear(void);
     void output(const char* str);
     void dump(void);
+
+private:
+    uint16_t addWithWraparound(uint16_t addr, uint16_t delta);
 };
 
 extern Log theLog;
