@@ -23,4 +23,3 @@ void initDisplay(const char* version) {
     display.setTextColor(WHITE);
     display.display();
 }
-

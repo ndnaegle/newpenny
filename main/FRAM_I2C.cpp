@@ -73,17 +73,22 @@ boolean FRAM_I2C::begin(uint8_t addr)
             Serial.print(F("Unrecognized Cypress device"));
             return false;
         }
+    } else if (m_manufacturerID == 0xF0) { // Cypress FM24C04B
+            // 4K
+            m_density = 4;
+            m_maxaddress = 511;
     }
-//    Serial.print(F("Manufacturer ID: 0x"));
-//    Serial.println(m_manufacturerID, HEX);
-//    Serial.print(F("Product ID: 0x"));
-//    Serial.println(m_productID, HEX);
-//    Serial.print(F("densityCode: 0x"));
-//    Serial.println(m_densityCode, HEX);
-//    Serial.print(F("density: "));
-//    Serial.println(m_density, DEC);
-//    Serial.print(F("maxaddress: "));
-//    Serial.println(m_maxaddress, DEC);
+    
+    Serial.print(F("Manufacturer ID: 0x"));
+    Serial.println(m_manufacturerID, HEX);
+    Serial.print(F("Product ID: 0x"));
+    Serial.println(m_productID, HEX);
+    Serial.print(F("densityCode: 0x"));
+    Serial.println(m_densityCode, HEX);
+    Serial.print(F("density: "));
+    Serial.println(m_density, DEC);
+    Serial.print(F("maxaddress: "));
+    Serial.println(m_maxaddress, DEC);
 
     m_framInitialized = true;
 
@@ -139,4 +144,3 @@ void FRAM_I2C::erase(void) {
         write8(i, 0x00);
     }
 }
-

@@ -65,7 +65,9 @@ void updateSerialKeys(void) {
 
 // with hardware debounce, we don't need much here. Zero might be OK.
 // with no hardware debounce, increase this to 40-50 ms
-#define DEBOUNCE_TIME 5 
+// Latest board rev (4.8) uses no HW debounce, so we're increasing to 45 ms.
+
+#define DEBOUNCE_TIME 45 
 
 Input inputHome = Input(homeSensorPin, DEBOUNCE_TIME, LOW, 'H');
 Input input90Degree = Input(degree90SensorPin, DEBOUNCE_TIME, LOW, '9');
@@ -124,4 +126,3 @@ void Input::displayLevel(void) {
     display.print(m_displaySymbol);
     display.setTextColor(WHITE);
 }
-

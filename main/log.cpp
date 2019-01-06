@@ -17,8 +17,10 @@ FRAM_I2C fram = FRAM_I2C(); // used only in this module
 void fram_setup(void) {
     if (fram.begin()) {
         Serial.println(F("Found I2C FRAM"));
+        haveFRAM = FOUND_FRAM;
     } else {
         Serial.println(F("I2C FRAM not found"));
+        haveFRAM = NO_FRAM;
     }
 }
 
@@ -102,4 +104,3 @@ void Log::dump(void) {
     } while (read != write);
     Serial.println();
 }
-

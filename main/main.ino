@@ -18,6 +18,7 @@
 
 // Globals
 int theState = INVALID_STATE;
+int haveFRAM = NO_FRAM;
 
 const char* dumpState(int state) {
     const char* pTag = NULL;
@@ -39,7 +40,7 @@ const char* dumpState(int state) {
 }
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(115200); // be sure to set '115200 baud' in Serial Monitor window
     while (!Serial)
         ;
 
@@ -98,7 +99,8 @@ void loop() {
             outputMotorRun.write(LOW);
             outputRedLeverLift.write(HIGH);
             gotoState(WAIT_FOR_COIN_STATE);
-        }
+            countdown = millis();
+      }
         break;
         
     case WAIT_FOR_COIN_STATE:
@@ -151,7 +153,7 @@ void loop() {
             edgeDetect = false;                    
             if (--stamp == 0) { // countdown the number of 90 degree sensor hits we've had
                 outputCoinDrop.write(HIGH);
-                fdump("The coin has been dropped\n");
+                fdump("The penny has been dropped\n");
                 outputCounter.write(HIGH);
                 countdown = millis();
                 gotoState(COIN_DROP_STATE);
@@ -251,14 +253,15 @@ void displayStatus(void) {
     outputCoinDrop.displayLevel();
 
     // Inputs
-//    inputHome.displayLevel();
+    inputHome.displayLevel();
     input90Degree.displayLevel();
     inputCoinAccept.displayLevel();
     inputButton1.displayLevel();
     inputButton2.displayLevel();
     inputButton3.displayLevel();
     inputButton4.displayLevel();
-    inputReset.displayLevel();
+//    inputReset.displayLevel();h
+
     display.println();
 
     display.setTextSize(1);
@@ -324,4 +327,3 @@ void printDigits(byte digits) {
         display.print('0');
     display.print(digits, DEC);  
 }
-

@@ -6,15 +6,16 @@
 
 #include "log.h"
 
-#define VERSION "0.5.0"
+#define VERSION "0.6.1"
 
-#define SCREENSAVER_INTERVAL_MS ((uint32_t)1000 * (uint32_t)60 * (uint32_t)60) // 1 hour
+#define SCREENSAVER_INTERVAL_MS ((uint32_t)1000 * (uint32_t)60 * (uint32_t)10) // 10 minutes
 
 // State indices. Must be less than 256 (8 bits)
 // Make sure to add new states to the dumpState() function for debugging
 #define INVALID_STATE 0
 #define START_STATE 5
 #define WAIT_FOR_HOME_STATE 10
+#define WAIT_FOR_LIFT_STATE 12
 #define WAIT_FOR_COIN_STATE 15
 #define WAIT_FOR_BUTTON_STATE 20
 #define STAMP_SELECTOR_STATE 45
@@ -26,6 +27,11 @@
 
 // Globals
 extern int theState;
+extern int haveFRAM;
+
+#define NO_FRAM 0
+#define FOUND_FRAM 1
+
 extern unsigned long int theTime;
 
 // fdump

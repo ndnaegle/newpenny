@@ -10,15 +10,24 @@
 // startConsole
 //  Decide whether to start the console based on user input
 boolean startConsole(void) {
+    boolean startConsole = false;
+    unsigned long timeStart = millis();
+    int countdown = 2;  //  so the startup message stays around long enough to be visible
+    const int timeWait = timeStart + countdown * 1000; // milliseconds
+    int timeCurrent = millis();
+    if (!haveFRAM) {  // no need to allow for starting a debug console if there's no FRAM to use with it.
+        while (timeCurrent < timeWait) { // wait, showing non-FRAM startup message
+        }
+        return startConsole;
+    }
     Serial.print(F("Hit 'd' to start debug mode: "));
     Serial.flush();
     display.setCursor(0, 24);
     display.display();
-    unsigned long timeStart = millis();
-    int countdown = 5;
+    timeStart = millis();
+    countdown = 5;
     const int timeEnd = timeStart + countdown * 1000; // milliseconds
-    int timeCurrent = millis();
-    boolean startConsole = false;
+    timeCurrent = millis();
     while (timeCurrent < timeEnd && !startConsole) {
         // print 5 4 3 2 1
         if ((timeEnd - timeCurrent) / 1000 < countdown) {

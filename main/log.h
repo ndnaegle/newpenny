@@ -17,4 +17,3 @@ private:
 extern Log theLog;
 
 #endif // #ifndef _LOG_H
-

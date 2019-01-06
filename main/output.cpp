@@ -40,4 +40,3 @@ void Output::displayLevel(void) {
     display.print(m_displaySymbol);
     display.setTextColor(WHITE);
 }
-
